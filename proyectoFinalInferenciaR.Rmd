@@ -1,0 +1,680 @@
+GeSHi © 2004-2007 Nigel McNie, 2007-2010 Benny Baumann, 2008-2009 Milian Wolff
+1.	library(readr)
+2.	library(tidyverse)
+3.	library(ggplot2)
+4.	library(dplyrAA)
+5.	library(psych)
+6.	library(PASWR2)
+7.	library(knitr)
+8.	 
+9.	library(readxl)
+10.	BD <- read_excel("BD.xlsx")
+11.	View(BD)
+12.	 
+13.	BD <- BD |>
+14.	  mutate(Nivel_Estudios = if_else(NIV == 0, "NULA", 
+15.	                                  if_else(NIV == 1 | NIV == 2 | NIV == 3, "BASICA", 
+16.	                                          if_else(NIV == 4 | NIV == 6 | NIV == 7 | NIV == 5, "MEDIA_SUPERIOR", "SUPERIOR"))))
+17.	 
+18.	summary <- BD |> 
+19.	  group_by(Nivel_Estudios) |>
+20.	  summarise(
+21.	    "Ingreso_promedio" = mean(ganancia_hora, na.rm = TRUE),
+22.	    "Horas_laborales_promedio" = mean(tot_horas, na.rm = TRUE),
+23.	    "Desv_ingreso" = sd(ganancia_hora, na.rm = TRUE),
+24.	    "Ingreso_maximo_x_hora" = max(ganancia_hora, na.rm = TRUE),
+25.	    "Ingreso_minimo_x_hora" = min(ganancia_hora, na.rm = TRUE),
+26.	    "1quantile" = quantile(ganancia_hora, .25, na.rm = TRUE),
+27.	    "3quantile" = quantile(ganancia_hora, .75, na.rm = TRUE), 
+28.	    "Edad_promedio" = mean(EDAD_V, na.rm = TRUE)
+29.	  ) 
+30.	write.csv(summary, file = "n_estudios.csv")
+31.	###Grafica de densidades de ganancia por hora dependiento el nivel de estudios
+32.	 
+33.	mean_values <- BD %>%
+34.	  group_by(Nivel_Estudios) %>%
+35.	  summarize(mean_ganancia = mean(ganancia_hora))
+36.	 
+37.	ggplot(BD) + 
+38.	  geom_density(aes(x = ganancia_hora, fill = Nivel_Estudios)) + 
+39.	  facet_wrap(~Nivel_Estudios) + 
+40.	  scale_fill_brewer(palette = "YlGnBu") + 
+41.	  geom_vline(
+42.	    data = mean_values,
+43.	    aes(xintercept = mean_ganancia),
+44.	    linetype = "dashed",
+45.	    color = "red"
+46.	  ) +
+47.	  geom_text(
+48.	    data = mean_values,
+49.	    aes(x = mean_ganancia, label = sprintf("Media: %.2f", mean_ganancia)),
+50.	    y = -Inf,  # Place the text at the bottom of the plot
+51.	    vjust = -3,  # Adjust vertical position
+52.	    hjust = -.7,  # Center the text horizontally
+53.	    color = "black",
+54.	    size = 3
+55.	  ) +
+56.	  labs(
+57.	    title = "Distribución del ingreso laboral por hora por nivel de estudios de 
+58.	las personas mayores de 15 años que trabajan y están afiliadas al 
+59.	IMSS/ISSSTE.",
+60.	    subtitle = "Fuente: ENUT 2019 INEGI",
+61.	    caption = "Elaboración propia"
+62.	  ) +
+63.	  theme_grey() 
+64.	 
+65.	##Hacemos el Boxplot
+66.	 
+67.	ggplot(BD, aes(y = Nivel_Estudios, x = ganancia_hora)) + 
+68.	  geom_boxplot(aes(fill = Nivel_Estudios), position = position_dodge(width = 0.8), width = 0.7)+ 
+69.	  scale_fill_brewer(palette = "YlGnBu") + 
+70.	  labs(x = "Ganancia_hora", y = "Escolaridad") +
+71.	  ggtitle("Boxplot del ingreso laboral por hora por nivel de estudios de 
+72.	las personas mayores de 15 años que trabajan y están afiliadas al 
+73.	IMSS/ISSSTE.") + 
+74.	  labs(
+75.	    subtitle = "Fuente: ENUT 2019 INEGI",
+76.	    caption = "Elaboración propia"
+77.	  )
+78.	##Función de probabilidad acumulada
+79.	ggplot(BD, aes(x = ganancia_hora, color = Nivel_Estudios), lwd = 1.5) +
+80.	  stat_ecdf(geom = "step", position = "identity")  +
+81.	  scale_x_log10()  +
+82.	  labs(
+83.	    title = "Función de Probabilidad Acumulada del ingreso laboral por hora por nivel de estudios 
+84.	de las personas mayores de 15 años que trabajan y están afiliadas al IMSS/ISSSTE.",
+85.	    subtitle = "Fuente: ENUT 2019 INEGI",
+86.	    caption = "Elaboración propia"
+87.	  ) + 
+88.	  scale_color_brewer(palette = "Set1")
+89.	 
+90.	 
+91.	######
+92.	 
+93.	mean_values <- BD %>%
+94.	  group_by(Nivel_Estudios) %>%
+95.	  summarize(mean_ganancia = mean(tot_horas))
+96.	 
+97.	ggplot(BD) + 
+98.	  geom_density(aes(x = tot_horas, fill = Nivel_Estudios))  + 
+99.	  facet_wrap(~Nivel_Estudios) + 
+100.	  scale_fill_brewer(palette = "YlGnBu") + 
+101.	  geom_vline(
+102.	    data = mean_values,
+103.	    aes(xintercept = mean_ganancia),
+104.	    linetype = "dashed",
+105.	    color = "red"
+106.	  ) +
+107.	  geom_text(
+108.	    data = mean_values,
+109.	    aes(x = mean_ganancia, label = sprintf("Media: %.2f", mean_ganancia)),
+110.	    y = -Inf,  # Place the text at the bottom of the plot
+111.	    vjust = -3,  # Adjust vertical position
+112.	    hjust = -.7,  # Center the text horizontally
+113.	    color = "black",
+114.	    size = 3
+115.	  ) +
+116.	  labs(
+117.	    title = "Distribución de las horas trabajadas por semana por nivel de estudios de 
+118.	las personas mayores de 15 años que trabajan y están afiliadas al 
+119.	IMSS/ISSSTE.",
+120.	    subtitle = "Fuente: ENUT 2019 INEGI",
+121.	    caption = "Elaboración propia",
+122.	    x = "Horas trabajadas a la semana"
+123.	  ) +
+124.	  theme_grey() 
+125.	 
+126.	##Hacemos el Boxplot
+127.	 
+128.	ggplot(BD, aes(y = Nivel_Estudios, x = tot_horas)) + 
+129.	  geom_boxplot(aes(fill = Nivel_Estudios), position = position_dodge(width = 0.8), width = 0.7)+ 
+130.	  scale_fill_brewer(palette = "YlGnBu") + 
+131.	  labs(x = "Horas trabajadas por semana", y = "Escolaridad") +
+132.	  ggtitle("Boxplot de las horas trabajadas por semana por nivel de estudios de 
+133.	las personas mayores de 15 años que trabajan y están afiliadas al 
+134.	IMSS/ISSSTE.") + 
+135.	  labs(
+136.	    subtitle = "Fuente: ENUT 2019 INEGI",
+137.	    caption = "Elaboración propia"
+138.	  )
+139.	##Función de probabilidad acumulada
+140.	ggplot(BD, aes(x = tot_horas, color = Nivel_Estudios), lwd = 1.5) +
+141.	  stat_ecdf(geom = "step", position = "identity")  +
+142.	  labs(
+143.	    title = "Función de Probabilidad Acumulada de las horas trabajadas por semana por nivel de estudios 
+144.	de las personas mayores de 15 años que trabajan y están afiliadas al IMSS/ISSSTE.",
+145.	    subtitle = "Fuente: ENUT 2019 INEGI",
+146.	    caption = "Elaboración propia",
+147.	    x = "Horas trabajadas a la semana"
+148.	  ) + 
+149.	  scale_color_brewer(palette = "Set1")
+150.	####### Prueba de hipotesis d9iferencias de medias salario por hora gente 
+151.	##### Nulo vs Basico; Nulo vs Secundaria; Nulo vs Media; Nulo vs Superior
+152.	##### Basico vs Secundaria; Basico vs Media; Basico vs Superior
+153.	##### Secundaria vs Media; Secundaria vs Superior
+154.	##### Media vs Superior
+155.	 
+156.	t.test(BD |> 
+157.	         filter(Nivel_Estudios == "NULA") |>
+158.	         select(ganancia_hora), BD |> 
+159.	         filter(Nivel_Estudios == "BASICA") |>
+160.	         select(ganancia_hora))
+161.	 
+162.	t.test(BD |> 
+163.	         filter(Nivel_Estudios == "NULA") |>
+164.	         select(ganancia_hora), BD |> 
+165.	         filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+166.	         select(ganancia_hora))
+167.	 
+168.	t.test(BD |> 
+169.	         filter(Nivel_Estudios == "NULA") |>
+170.	         select(ganancia_hora), BD |> 
+171.	         filter(Nivel_Estudios == "SUPERIOR") |>
+172.	         select(ganancia_hora))
+173.	 
+174.	t.test(BD |> 
+175.	         filter(Nivel_Estudios == "BASICA") |>
+176.	         select(ganancia_hora), BD |> 
+177.	         filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+178.	         select(ganancia_hora))
+179.	 
+180.	t.test(BD |> 
+181.	         filter(Nivel_Estudios == "BASICA") |>
+182.	         select(ganancia_hora), BD |> 
+183.	         filter(Nivel_Estudios == "SUPERIOR") |>
+184.	         select(ganancia_hora))
+185.	 
+186.	t.test(BD |> 
+187.	         filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+188.	         select(ganancia_hora), BD |> 
+189.	         filter(Nivel_Estudios == "SUPERIOR") |>
+190.	         select(ganancia_hora))
+191.	 
+192.	##### POR HORAS
+193.	 
+194.	t.test(BD |> 
+195.	         filter(Nivel_Estudios == "NULA") |>
+196.	         select(tot_horas), BD |> 
+197.	         filter(Nivel_Estudios == "BASICA") |>
+198.	         select(tot_horas))
+199.	 
+200.	t.test(BD |> 
+201.	         filter(Nivel_Estudios == "NULA") |>
+202.	         select(tot_horas), BD |> 
+203.	         filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+204.	         select(tot_horas))
+205.	 
+206.	t.test(BD |> 
+207.	         filter(Nivel_Estudios == "NULA") |>
+208.	         select(tot_horas), BD |> 
+209.	         filter(Nivel_Estudios == "SUPERIOR") |>
+210.	         select(tot_horas))
+211.	 
+212.	t.test(BD |> 
+213.	         filter(Nivel_Estudios == "BASICA") |>
+214.	         select(tot_horas), BD |> 
+215.	         filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+216.	         select(tot_horas))
+217.	 
+218.	t.test(BD |> 
+219.	         filter(Nivel_Estudios == "BASICA") |>
+220.	         select(tot_horas), BD |> 
+221.	         filter(Nivel_Estudios == "SUPERIOR") |>
+222.	         select(tot_horas))
+223.	 
+224.	t.test(BD |> 
+225.	         filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+226.	         select(tot_horas), BD |> 
+227.	         filter(Nivel_Estudios == "SUPERIOR") |>
+228.	         select(tot_horas))
+229.	 
+230.	##############################################
+231.	##############################################
+232.	###                                       ####
+233.	###          Preuba por Sexo              ####
+234.	###                                       ####
+235.	##############################################
+236.	##############################################
+237.	 
+238.	 
+239.	 
+240.	BD <- BD |>
+241.	  mutate(Sexo = if_else(SEXO == 1, "HOMBRE", "MUJER"))
+242.	 
+243.	summary <- BD |> 
+244.	  group_by(Sexo) |>
+245.	  summarise(
+246.	    "Ingreso_promedio" = mean(ganancia_hora, na.rm = TRUE),
+247.	    "Horas_laborales_promedio" = mean(tot_horas, na.rm = TRUE),
+248.	    "Desv_ingreso" = sd(ganancia_hora, na.rm = TRUE),
+249.	    "Ingreso_maximo_x_hora" = max(ganancia_hora, na.rm = TRUE),
+250.	    "Ingreso_minimo_x_hora" = min(ganancia_hora, na.rm = TRUE),
+251.	    "1quantile" = quantile(ganancia_hora, .25, na.rm = TRUE),
+252.	    "3quantile" = quantile(ganancia_hora, .75, na.rm = TRUE), 
+253.	    "Edad_promedio" = mean(EDAD_V, na.rm = TRUE)
+254.	  ) 
+255.	write.csv(summary, file = "sexo_estudios.csv")
+256.	 
+257.	###Densidad ganancia hora
+258.	 
+259.	mean_values <- BD %>%
+260.	  group_by(Sexo) %>%
+261.	  summarize(mean_ganancia = mean(ganancia_hora))
+262.	 
+263.	ggplot(BD) + 
+264.	  geom_density(aes(x = ganancia_hora, fill = Sexo),  alpha = .6)  + scale_x_log10() + 
+265.	  scale_fill_manual(values = c("lightblue", "lightpink")) + 
+266.	  geom_vline(
+267.	    data = mean_values,
+268.	    aes(xintercept = 56.46319),
+269.	    linetype = "dashed",
+270.	    color = "red"
+271.	  ) +
+272.	  geom_text(
+273.	    data = mean_values,
+274.	    aes(x = 56.46319, label = sprintf("Media hombres: %.2f", 56.46319)),
+275.	    y = -Inf,  # Place the text at the bottom of the plot
+276.	    vjust = -3,  # Adjust vertical position
+277.	    hjust = -.7,  # Center the text horizontally
+278.	    color = "black",
+279.	    size = 3.5
+280.	  ) +
+281.	  geom_vline(
+282.	    data = mean_values,
+283.	    aes(xintercept = 54.83336),
+284.	    linetype = "dashed",
+285.	    color = "red"
+286.	  ) +
+287.	  geom_text(
+288.	    data = mean_values,
+289.	    aes(x = 54.83336, label = sprintf("Media mujeres: %.2f", 54.83336)),
+290.	    y = -Inf,  # Place the text at the bottom of the plot
+291.	    vjust = -5,  # Adjust vertical position
+292.	    hjust = -1.5,  # Center the text horizontally
+293.	    color = "black",
+294.	    size = 3.5
+295.	  ) +
+296.	  labs(
+297.	    title = "Distribución del ingreso laboral por hora por sexo de 
+298.	las personas mayores de 15 años que trabajan y están afiliadas al 
+299.	IMSS/ISSSTE.",
+300.	    subtitle = "Fuente: ENUT 2019 INEGI
+301.	(Transformación logarítmica para mejor visualización de los datos)",
+302.	    caption = "Elaboración propia"
+303.	  ) +
+304.	  theme_grey() 
+305.	 
+306.	##Hacemos el Boxplot
+307.	 
+308.	ggplot(BD, aes(y = Sexo, x = ganancia_hora)) + 
+309.	  geom_boxplot(aes(fill = Sexo), position = position_dodge(width = 0.8), width = 0.7)+ 
+310.	  scale_fill_manual(values = c("lightblue", "lightpink")) + 
+311.	  labs(x = "Ganancia_hora", y = "Sexo") +
+312.	  ggtitle("Boxplot del ingreso laboralpor hora por sexo de 
+313.	las personas mayores de 15 años que trabajan y están afiliadas al 
+314.	IMSS/ISSSTE.") + 
+315.	  labs(
+316.	    subtitle = "Fuente: ENUT 2019 INEGI",
+317.	    caption = "Elaboración propia"
+318.	  )
+319.	 
+320.	##Función de probabilidad acumulada
+321.	ggplot(BD, aes(x = ganancia_hora, color = Sexo), lwd = 1.5) +
+322.	  stat_ecdf(geom = "step", position = "identity")  +
+323.	  scale_x_log10()  +
+324.	  labs(
+325.	    title = "Función de Probabilidad Acumulada del ingreso laboral por sexo 
+326.	de las personas mayores de 15 años que trabajan y están afiliadas al IMSS/ISSSTE.",
+327.	    subtitle = "Fuente: ENUT 2019 INEGI",
+328.	    caption = "Elaboración propia"
+329.	  ) + 
+330.	  scale_color_manual(values = c("darkblue", "purple"))
+331.	 
+332.	 
+333.	##Prueba de hipotesisi diferencia de medias 
+334.	 
+335.	t.test(BD |> 
+336.	         filter(Sexo == "HOMBRE") |>
+337.	         select(ganancia_hora), BD |> 
+338.	         filter(Sexo == "MUJER") |>
+339.	         select(ganancia_hora))
+340.	 
+341.	#############
+342.	#### Por hora (Sexo)
+343.	#############
+344.	 
+345.	mean_values <- BD %>%
+346.	  group_by(Sexo) %>%
+347.	  summarize(mean_ganancia = mean(tot_horas))
+348.	 
+349.	ggplot(BD) + 
+350.	  geom_density(aes(x = tot_horas, fill = Sexo),  alpha = .6)+ 
+351.	  scale_fill_manual(values = c("lightblue", "lightpink")) + 
+352.	  geom_vline(
+353.	    data = mean_values,
+354.	    aes(xintercept = 51.96180),
+355.	    linetype = "dashed",
+356.	    color = "red"
+357.	  ) +
+358.	  geom_text(
+359.	    data = mean_values,
+360.	    aes(x = 51.96180, label = sprintf("Media hombres: %.2f", 51.96180)),
+361.	    y = -Inf,  # Place the text at the bottom of the plot
+362.	    vjust = -3,  # Adjust vertical position
+363.	    hjust = 0,  # Center the text horizontally
+364.	    color = "black",
+365.	    size = 3.5
+366.	  ) +
+367.	  geom_vline(
+368.	    data = mean_values,
+369.	    aes(xintercept = 45.33588),
+370.	    linetype = "dashed",
+371.	    color = "red"
+372.	  ) +
+373.	  geom_text(
+374.	    data = mean_values,
+375.	    aes(x = 45.33588, label = sprintf("Media mujeres: %.2f", 45.33588)),
+376.	    y = -Inf,  # Place the text at the bottom of the plot
+377.	    vjust = -5,  # Adjust vertical position
+378.	    hjust = 0,  # Center the text horizontally
+379.	    color = "black",
+380.	    size = 3.5
+381.	  ) +
+382.	  labs(
+383.	    title = "Distribución de horas trabajadas semanales por sexo de 
+384.	las personas mayores de 15 años que trabajan y están afiliadas al 
+385.	IMSS/ISSSTE.",
+386.	    subtitle = "Fuente: ENUT 2019 INEGI
+387.	(Transformación logarítmica para mejor visualización de los datos)",
+388.	    caption = "Elaboración propia"
+389.	  ) +
+390.	  theme_grey() 
+391.	 
+392.	##Hacemos el Boxplot
+393.	 
+394.	ggplot(BD, aes(y = Sexo, x = tot_horas)) + 
+395.	  geom_boxplot(aes(fill = Sexo), position = position_dodge(width = 0.8), width = 0.7)+ 
+396.	  scale_fill_manual(values = c("lightblue", "lightpink")) + 
+397.	  labs(x = "Horas trabajadas por semana", y = "Sexo") +
+398.	  ggtitle("Boxplot del total de horas trabajadas semanales por sexo de 
+399.	las personas mayores de 15 años que trabajan y están afiliadas al 
+400.	IMSS/ISSSTE.") + 
+401.	  labs(
+402.	    subtitle = "Fuente: ENUT 2019 INEGI",
+403.	    caption = "Elaboración propia"
+404.	  )
+405.	 
+406.	##Función de probabilidad acumulada
+407.	ggplot(BD, aes(x = tot_horas, color = Sexo), lwd = 1.5) +
+408.	  stat_ecdf(geom = "step", position = "identity")   +
+409.	  labs(
+410.	    title = "Función de Probabilidad Acumulada horas trabajadas semanales por sexo 
+411.	de las personas mayores de 15 años que trabajan y están afiliadas al IMSS/ISSSTE.",
+412.	    subtitle = "Fuente: ENUT 2019 INEGI",
+413.	    caption = "Elaboración propia"
+414.	  ) + 
+415.	  scale_color_manual(values = c("darkblue", "purple"))
+416.	 
+417.	 
+418.	##Prueba de hipotesisi diferencia de medias 
+419.	 
+420.	t.test(BD |> 
+421.	         filter(Sexo == "HOMBRE") |>
+422.	         select(tot_horas), BD |> 
+423.	         filter(Sexo == "MUJER") |>
+424.	         select(tot_horas))
+425.	 
+426.	##########PREUBAS DE HIPOTESIS DIFERENCIA DE SALARIOS Y HORAS DADO EL GRADO ESCOLAR###
+427.	 
+428.	####EDUCACIÓN NULA
+429.	summary <- BD |> 
+430.	  filter(Nivel_Estudios == "NULA") |>
+431.	  group_by(Sexo) |>
+432.	  summarise(
+433.	    "Ingreso_promedio" = mean(ganancia_hora, na.rm = TRUE),
+434.	    "Horas_laborales_promedio" = mean(tot_horas, na.rm = TRUE),
+435.	    "Desv_ingreso" = sd(ganancia_hora, na.rm = TRUE),
+436.	    "Ingreso_maximo_x_hora" = max(ganancia_hora, na.rm = TRUE),
+437.	    "Ingreso_minimo_x_hora" = min(ganancia_hora, na.rm = TRUE),
+438.	    "1quantile" = quantile(ganancia_hora, .25, na.rm = TRUE),
+439.	    "3quantile" = quantile(ganancia_hora, .75, na.rm = TRUE), 
+440.	    "Edad_promedio" = mean(EDAD_V, na.rm = TRUE)
+441.	  ) 
+442.	 
+443.	v_h <- BD |> filter(Nivel_Estudios == "NULA" & Sexo == "HOMBRE")
+444.	v_m <- BD |> filter(Nivel_Estudios == "NULA" & Sexo == "MUJER")
+445.	 
+446.	v_h <- v_h$ganancia_hora
+447.	v_m <- v_m$ganancia_hora
+448.	 
+449.	var.test(v_h, v_m) ####Se rechaza que las varianzas sean iguales
+450.	###Prueba de diferencia de medias
+451.	t.test(BD |> filter(Nivel_Estudios == "NULA" & Sexo == "MUJER") |> select(ganancia_hora),
+452.	       BD |> filter(Nivel_Estudios == "NULA" & Sexo == "HOMBRE") |> select(ganancia_hora), var.equal = FALSE, alternative = "less") ### Se rechaza que las medias sean iguales
+453.	 
+454.	####EDUCACIÓN BÁSICA
+455.	summary <- BD |> 
+456.	  filter(Nivel_Estudios == "BASICA") |>
+457.	  group_by(Sexo) |>
+458.	  summarise(
+459.	    "Ingreso_promedio" = mean(ganancia_hora, na.rm = TRUE),
+460.	    "Horas_laborales_promedio" = mean(tot_horas, na.rm = TRUE),
+461.	    "Desv_ingreso" = sd(ganancia_hora, na.rm = TRUE),
+462.	    "Ingreso_maximo_x_hora" = max(ganancia_hora, na.rm = TRUE),
+463.	    "Ingreso_minimo_x_hora" = min(ganancia_hora, na.rm = TRUE),
+464.	    "1quantile" = quantile(ganancia_hora, .25, na.rm = TRUE),
+465.	    "3quantile" = quantile(ganancia_hora, .75, na.rm = TRUE), 
+466.	    "Edad_promedio" = mean(EDAD_V, na.rm = TRUE)
+467.	  ) 
+468.	 
+469.	v_h <- BD |> filter(Nivel_Estudios == "BASICA" & Sexo == "HOMBRE")
+470.	v_m <- BD |> filter(Nivel_Estudios == "BASICA" & Sexo == "MUJER")
+471.	 
+472.	v_h <- v_h$ganancia_hora
+473.	v_m <- v_m$ganancia_hora
+474.	 
+475.	var.test(v_h, v_m) ####Se rechaza que las varianzas sean iguales
+476.	###Prueba de diferencia de medias
+477.	t.test(BD |> filter(Nivel_Estudios == "BASICA" & Sexo == "MUJER") |> select(ganancia_hora),
+478.	       BD |> filter(Nivel_Estudios == "BASICA" & Sexo == "HOMBRE") |> select(ganancia_hora), var.equal = FALSE, alternative = "less") ### Se rechaza que las medias sean iguales
+479.	 
+480.	####EDUCACIÓN MEDIA_SUPERIOR
+481.	summary <- BD |> 
+482.	  filter(Nivel_Estudios == "MEDIA_SUPERIOR") |>
+483.	  group_by(Sexo) |>
+484.	  summarise(
+485.	    "Ingreso_promedio" = mean(ganancia_hora, na.rm = TRUE),
+486.	    "Horas_laborales_promedio" = mean(tot_horas, na.rm = TRUE),
+487.	    "Desv_ingreso" = sd(ganancia_hora, na.rm = TRUE),
+488.	    "Ingreso_maximo_x_hora" = max(ganancia_hora, na.rm = TRUE),
+489.	    "Ingreso_minimo_x_hora" = min(ganancia_hora, na.rm = TRUE),
+490.	    "1quantile" = quantile(ganancia_hora, .25, na.rm = TRUE),
+491.	    "3quantile" = quantile(ganancia_hora, .75, na.rm = TRUE), 
+492.	    "Edad_promedio" = mean(EDAD_V, na.rm = TRUE)
+493.	  ) 
+494.	 
+495.	v_h <- BD |> filter(Nivel_Estudios == "MEDIA_SUPERIOR" & Sexo == "HOMBRE")
+496.	v_m <- BD |> filter(Nivel_Estudios == "MEDIA_SUPERIOR" & Sexo == "MUJER")
+497.	 
+498.	v_h <- v_h$ganancia_hora
+499.	v_m <- v_m$ganancia_hora
+500.	 
+501.	var.test(v_h, v_m) ####Se rechaza que las varianzas sean iguales
+502.	###Prueba de diferencia de medias
+503.	t.test(BD |> filter(Nivel_Estudios == "MEDIA_SUPERIOR" & Sexo == "MUJER") |> select(ganancia_hora),
+504.	       BD |> filter(Nivel_Estudios == "MEDIA_SUPERIOR" & Sexo == "HOMBRE") |> select(ganancia_hora), var.equal = FALSE, alternative = "less") ### Se rechaza la nula
+505.	 
+506.	 
+507.	####EDUCACIÓN SUPERIOR
+508.	summary <- BD |> 
+509.	  filter(Nivel_Estudios == "SUPERIOR") |>
+510.	  group_by(Sexo) |>
+511.	  summarise(
+512.	    "Ingreso_promedio" = mean(ganancia_hora, na.rm = TRUE),
+513.	    "Horas_laborales_promedio" = mean(tot_horas, na.rm = TRUE),
+514.	    "Desv_ingreso" = sd(ganancia_hora, na.rm = TRUE),
+515.	    "Ingreso_maximo_x_hora" = max(ganancia_hora, na.rm = TRUE),
+516.	    "Ingreso_minimo_x_hora" = min(ganancia_hora, na.rm = TRUE),
+517.	    "1quantile" = quantile(ganancia_hora, .25, na.rm = TRUE),
+518.	    "3quantile" = quantile(ganancia_hora, .75, na.rm = TRUE), 
+519.	    "Edad_promedio" = mean(EDAD_V, na.rm = TRUE)
+520.	  ) 
+521.	 
+522.	v_h <- BD |> filter(Nivel_Estudios == "SUPERIOR" & Sexo == "HOMBRE")
+523.	v_m <- BD |> filter(Nivel_Estudios == "SUPERIOR" & Sexo == "MUJER")
+524.	 
+525.	v_h <- v_h$ganancia_hora
+526.	v_m <- v_m$ganancia_hora
+527.	 
+528.	var.test(v_h, v_m) ####Se rechaza que las varianzas sean iguales
+529.	###Prueba de diferencia de medias
+530.	t.test(BD |> filter(Nivel_Estudios == "SUPERIOR" & Sexo == "MUJER") |> select(ganancia_hora),
+531.	       BD |> filter(Nivel_Estudios == "SUPERIOR" & Sexo == "HOMBRE") |> select(ganancia_hora), var.equal = FALSE, alternative = "less") ### Se rechaza la nula
+532.	 
+533.	 
+534.	#Horas domésticas
+535.	 
+536.	horas_casa <- read_excel("todo_con_p6_3_1.xlsx")
+537.	View(horas_casa)
+538.	 
+539.	horas_casa <- horas_casa |> 
+540.	  mutate("Sexo" = if_else(SEXO == 1, "HOMBRE", "MUJER"))
+541.	 
+542.	 
+543.	summary <- horas_casa |>
+544.	  group_by(Sexo) |>
+545.	  summarise(
+546.	    "Promedio_horas_domesticas_semana" = mean(tot_horas_casa, na.rm = TRUE),
+547.	    "Sd_horas_domesticas_semana" = sd(tot_horas_casa, na.rm = TRUE)
+548.	  )
+549.	 
+550.	 
+551.	mean_values <- horas_casa %>%
+552.	  group_by(Sexo) %>%
+553.	  summarize(mean_ganancia = mean(tot_horas_casa))
+554.	 
+555.	ggplot(horas_casa) + 
+556.	  geom_density(aes(x = tot_horas_casa, fill = Sexo),  alpha = .6)+ 
+557.	  scale_fill_manual(values = c("lightblue", "lightpink")) + 
+558.	  geom_vline(
+559.	    data = mean_values,
+560.	    aes(xintercept = 9.777031),
+561.	    linetype = "dashed",
+562.	    color = "red"
+563.	  ) +
+564.	  geom_text(
+565.	    data = mean_values,
+566.	    aes(x = 9.777031, label = sprintf("Media hombres: %.2f", 9.777031)),
+567.	    y = -Inf,  # Place the text at the bottom of the plot
+568.	    vjust = -3,  # Adjust vertical position
+569.	    hjust = 0,  # Center the text horizontally
+570.	    color = "black",
+571.	    size = 3.5
+572.	  ) +
+573.	  geom_vline(
+574.	    data = mean_values,
+575.	    aes(xintercept = 23.652938),
+576.	    linetype = "dashed",
+577.	    color = "red"
+578.	  ) +
+579.	  geom_text(
+580.	    data = mean_values,
+581.	    aes(x = 23.652938, label = sprintf("Media mujeres: %.2f", 23.652938)),
+582.	    y = -Inf,  # Place the text at the bottom of the plot
+583.	    vjust = -5,  # Adjust vertical position
+584.	    hjust = 0,  # Center the text horizontally
+585.	    color = "black",
+586.	    size = 3.5
+587.	  ) +
+588.	  labs(
+589.	    title = "Distribución de horas domésticas semanales por sexo de 
+590.	las personas mayores de 15 años que trabajan y están afiliadas al 
+591.	IMSS/ISSSTE.",
+592.	    subtitle = "Fuente: ENUT 2019 INEGI",
+593.	    caption = "Elaboración propia"
+594.	  ) +
+595.	  theme_grey() 
+596.	 
+597.	 
+598.	v_h <- horas_casa |> filter(Sexo == "HOMBRE") |> select(tot_horas_casa)
+599.	v_m <- horas_casa |> filter(Sexo == "MUJER") |> select(tot_horas_casa)
+600.	 
+601.	v_h <- v_h$tot_horas_casa
+602.	v_m <- v_m$tot_horas_casa
+603.	 
+604.	var.test(v_h, v_m)
+605.	###No podemos afirmar que las varianzas sean iguales
+606.	##Hacemos diferencia de medias
+607.	t.test(
+608.	  horas_casa |> filter(Sexo == "MUJER") |> select(tot_horas_casa),
+609.	  horas_casa |> filter(Sexo == "HOMBRE",) |> select(tot_horas_casa),
+610.	  var.equal = FALSE, alternative = "greater"
+611.	) ####Se valida la alternativa de que 
+612.	 
+613.	 
+614.	ggplot(horas_casa, aes(y = Sexo, x = tot_horas_casa)) + 
+615.	  geom_boxplot(aes(fill = Sexo), position = position_dodge(width = 0.8), width = 0.7)+ 
+616.	  scale_fill_manual(values = c("lightblue", "lightpink")) + 
+617.	  labs(x = "Horas domésticas", y = "Sexo") +
+618.	  ggtitle("Boxplot de horas de actividades domésticas por sexo de 
+619.	las personas mayores de 15 años que trabajan y están afiliadas al 
+620.	IMSS/ISSSTE.") + 
+621.	  labs(
+622.	    subtitle = "Fuente: ENUT 2019 INEGI",
+623.	    caption = "Elaboración propia"
+624.	  )
+625.	 
+626.	 
+627.	##Función de probabilidad acumulada
+628.	ggplot(horas_casa, aes(x = tot_horas_casa, color = Sexo), lwd = 1.5) +
+629.	  stat_ecdf(geom = "step", position = "identity")   +
+630.	  labs(
+631.	    title = "Función de Probabilidad Acumulada horas de actividades domésticas por sexo 
+632.	de las personas mayores de 15 años que trabajan y están afiliadas al 
+633.	IMSS/ISSSTE.",
+634.	    subtitle = "Fuente: ENUT 2019 INEGI",
+635.	    caption = "Elaboración propia"
+636.	  ) + 
+637.	  scale_color_manual(values = c("darkblue", "purple"))
+638.	 
+639.	 
+640.	#instalar (si aún no está instalado) y cargar el paquete tseries
+641.	if (! require (tseries)) {install.packages ('tseries')}
+642.	library(tseries)
+643.	#generar una lista de 100 variables aleatorias distribuidas normalmente
+644.	datos <- BD$ganancia_hora
+645.	 
+646.	#conduct prueba de Jarque-Bera
+647.	jarque.bera.test(datos)
+648.	 
+649.	 
+650.	eda(BD$ganancia_hora)
+651.	 
+652.	 
+653.	# Imprimir la información de la sesión
+654.	sessionInfo()
+
+R version 4.2.2 (2022-10-31 ucrt)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 19045)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=Spanish_Mexico.utf8  LC_CTYPE=Spanish_Mexico.utf8    LC_MONETARY=Spanish_Mexico.utf8 LC_NUMERIC=C                   
+[5] LC_TIME=Spanish_Mexico.utf8    
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] readxl_1.4.2    knitr_1.45      PASWR2_1.0.5    lattice_0.20-45 psych_2.3.9     lubridate_1.9.2 forcats_1.0.0   stringr_1.5.0  
+ [9] dplyr_1.1.2     purrr_1.0.1     tidyr_1.3.0     tibble_3.2.1    ggplot2_3.4.1   tidyverse_2.0.0 readr_2.1.4    
+
+loaded via a namespace (and not attached):
+ [1] cellranger_1.1.0 pillar_1.9.0     compiler_4.2.2   class_7.3-20     tools_4.2.2      nlme_3.1-160     lifecycle_1.0.3 
+ [8] gtable_0.3.1     timechange_0.2.0 pkgconfig_2.0.3  rlang_1.1.1      cli_3.6.0        rstudioapi_0.14  parallel_4.2.2  
+[15] xfun_0.41        e1071_1.7-13     withr_2.5.0      generics_0.1.3   vctrs_0.6.3      hms_1.1.2        grid_4.2.2      
+[22] tidyselect_1.2.0 glue_1.6.2       R6_2.5.1         fansi_1.0.4      tzdb_0.3.0       magrittr_2.0.3   scales_1.2.1    
+[29] ellipsis_0.3.2   mnormt_2.1.1     colorspace_2.1-0 utf8_1.2.2       proxy_0.4-27     stringi_1.7.12   munsell_0.5.0   
+
